@@ -1,0 +1,65 @@
+/* DASHBOARD RESPONSIVE - SOLO MÓVIL */
+@media (max-width: 768px) {
+  /* Layout principal */
+  .dashboard-mobile {
+    padding: 20px 16px !important;
+  }
+  
+  /* Header móvil */
+  .dashboard-header-mobile {
+    flex-direction: column !important;
+    gap: 16px !important;
+    padding: 16px !important;
+    margin-bottom: 24px !important;
+  }
+  
+  /* Estadísticas admin */
+  .admin-stats-mobile {
+    background: rgba(255,255,255,0.1) !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    margin-bottom: 16px !important;
+  }
+  
+  /* Botón logout móvil */
+  .logout-btn-mobile {
+    width: 100% !important;
+    padding: 14px !important;
+    font-size: 16px !important;
+    margin-top: 16px !important;
+  }
+  
+  /* Grid de tarjetas - 1 columna */
+  .cards-grid-mobile {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  
+  /* Tarjetas individuales */
+  .card-mobile {
+    padding: 20px !important;
+    margin: 0 !important;
+  }
+  
+  /* Iconos de tarjetas */
+  .card-icon-mobile {
+    width: 50px !important;
+    height: 50px !important;
+    font-size: 20px !important;
+    margin-bottom: 12px !important;
+  }
+  
+  /* Textos responsivos */
+  .card-title-mobile {
+    font-size: 1.1rem !important;
+  }
+  
+  .card-desc-mobile {
+    font-size: 0.9rem !important;
+  }
+}
+
+/* Clases para escritorio (no se ven en móvil) */
+.dashboard-desktop {
+  /* Estos estilos solo aplican en escritorio */
+}
