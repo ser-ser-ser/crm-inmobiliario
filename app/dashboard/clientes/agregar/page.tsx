@@ -1,7 +1,7 @@
 // /dashboard/clientes/agregar/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -9,7 +9,14 @@ import Link from 'next/link';
 export default function AgregarCliente() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  
+  const [userEmail, setUserEmail] = useState('');
+
+  // Obtener email del usuario logueado
+  useEffect(() => {
+    const email = localStorage.getItem('userEmail');
+    if (email) setUserEmail(email);
+  }, []);
+
   const [formData, setFormData] = useState({
     tipo: 'comprador',
     nombre: '',
@@ -38,10 +45,23 @@ export default function AgregarCliente() {
     setLoading(true);
 
     try {
+      // Obtener broker_id del usuario logueado
+      let brokerId = null;
+      if (userEmail) {
+        const { data: usuario } = await supabase
+          .from('usuarios')
+          .select('broker_id')
+          .eq('email', userEmail)
+          .single();
+        
+        brokerId = usuario?.broker_id;
+      }
+
       const { error } = await supabase
         .from('clientes')
         .insert([{
           ...formData,
+          broker_id: brokerId,  // ← ASIGNAR BROKER_ID AUTOMÁTICO
           presupuesto_min: formData.presupuesto_min ? parseFloat(formData.presupuesto_min) : null,
           presupuesto_max: formData.presupuesto_max ? parseFloat(formData.presupuesto_max) : null
         }]);
