@@ -187,41 +187,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Panel de usuarios de prueba */}
-        <div style={{ marginTop: '30px', padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <h4 style={{ marginBottom: '15px', color: '#374151', fontSize: '16px', textAlign: 'center' }}>
-            👥 Usuarios de Prueba
-          </h4>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            <div style={{ marginBottom: '8px', padding: '8px', background: '#fee2e2', borderRadius: '4px' }}>
-              <strong>👑 Super Admin:</strong> superadmin@inmobiliaria.com / superadmin123
-            </div>
-            <div style={{ marginBottom: '8px', padding: '8px', background: '#dcfce7', borderRadius: '4px' }}>
-              <strong>💼 Admin Principal:</strong> admin@inmobiliaria.com / admin123
-            </div>
-            <div style={{ marginBottom: '8px', padding: '8px', background: '#dcfce7', borderRadius: '4px' }}>
-              <strong>💼 Admin Secundario:</strong> admin2@inmobiliaria.com / admin123
-            </div>
-            <div style={{ marginBottom: '4px', padding: '8px', background: '#dbeafe', borderRadius: '4px' }}>
-              <strong>🤝 Brokers:</strong> 
-            </div>
-            <div style={{ marginBottom: '2px', paddingLeft: '15px' }}>carlos@inmobiliaria.com / broker123</div>
-            <div style={{ marginBottom: '2px', paddingLeft: '15px' }}>ana@inmobiliaria.com / broker123</div>
-            <div style={{ paddingLeft: '15px' }}>miguel@inmobiliaria.com / broker123</div>
-          </div>
-        </div>
-
-        {/* Información de roles */}
-        <div style={{ marginTop: '15px', textAlign: 'center' }}>
-          <details style={{ fontSize: '12px', color: '#6b7280' }}>
-            <summary>ℹ️ Información de roles</summary>
-            <div style={{ marginTop: '8px', textAlign: 'left' }}>
-              <div><strong>👑 Super Admin:</strong> Acceso total al sistema</div>
-              <div><strong>💼 Admin:</strong> Gestiona usuarios y ve todo</div>
-              <div><strong>🤝 Broker:</strong> Solo ve sus clientes y propiedades</div>
-            </div>
-          </details>
-        </div>
+       
 
         {/* Link a registro */}
         <div style={{ marginTop: '20px', textAlign: 'center' }}>
