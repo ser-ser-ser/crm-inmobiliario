@@ -1,20 +1,20 @@
 {
-  "name": "CRM Inmobiliario Pro",
-  "short_name": "CRM Inmob",
-  "description": "CRM profesional para brokers",
+  "name": "Brokermex CRM",
+  "short_name": "Brokermex",
+  "description": "CRM profesional Brokermex para inmobiliarias y agentes inmobiliarios.",
   "start_url": "/",
-  "display": "standalone",
+  "display": "standalone", 
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/brokermex192blue.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
+      "src": "/brokermex512blue.png",
+      "sizes": "512x512", 
       "type": "image/png"
     }
   ]
