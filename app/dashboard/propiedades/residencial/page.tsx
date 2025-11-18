@@ -325,6 +325,7 @@ export default function ListaPropiedadesResidenciales() {
           borderRadius: '12px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
           border: '1px solid #e2e8f0',
+          overflowX: 'auto',
           overflow: 'hidden'
         }}>
           <div style={{ 

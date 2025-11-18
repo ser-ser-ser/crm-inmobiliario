@@ -352,3 +352,62 @@ body {
     cursor: pointer !important;
   }
 }
+/* SCROLL HORIZONTAL AUTOMÁTICO PARA TODOS LOS GRIDS */
+@media (max-width: 768px) {
+  /* Para grids que simulan tablas */
+  [style*="gridTemplateColumns"] {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+  
+  /* Para contenedores que podrían tener tablas/grids */
+  .table-container, 
+  [class*="table"],
+  [class*="grid"]:not(.cards-grid-mobile) {
+    overflow-x: auto !important;
+  }
+  
+  /* Ancho mínimo para grids complejos */
+  [style*="gridTemplateColumns"] > div {
+    min-width: 800px !important;
+  }
+}
+/* PESTAÑAS RESPONSIVE - ACORDEÓN VERTICAL EN MÓVIL */
+@media (max-width: 768px) {
+  /* Convertir tabs horizontales en acordeón vertical */
+  .tabs-container, 
+  [class*="tab"],
+  [class*="Tabs"],
+  [role="tablist"] {
+    display: block !important;
+    width: 100% !important;
+  }
+  
+  .tab-item,
+  [role="tab"],
+  [class*="tab-item"],
+  [class*="Tab"] {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+    padding: 16px !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    text-align: center !important;
+    background: white !important;
+  }
+  
+  .tab-item.active,
+  [role="tab"][aria-selected="true"],
+  [class*="active"] {
+    background: #181f42 !important;
+    color: white !important;
+    border-color: #181f42 !important;
+  }
+  
+  /* Contenido de tabs - mostrar todo en móvil o solo el activo */
+  .tab-content,
+  [role="tabpanel"] {
+    margin-top: 16px !important;
+  }
+}
