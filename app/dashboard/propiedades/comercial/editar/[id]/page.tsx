@@ -13,6 +13,10 @@ export default function EditarPropiedadComercial() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [activeSection, setActiveSection] = useState('basica');
+  const [userRole, setUserRole] = useState('');
+  const [currentBrokerId, setCurrentBrokerId] = useState<string | null>(null);
+  const [propiedadBrokerId, setPropiedadBrokerId] = useState<string | null>(null);
+  const [accessDenied, setAccessDenied] = useState(false);
   
   const [formData, setFormData] = useState({
     // INFORMACIÓN BÁSICA
@@ -108,124 +112,156 @@ export default function EditarPropiedadComercial() {
     especificaciones_adicionales: ''
   });
 
-  // Cargar los datos de la propiedad
+  // Cargar datos y validar permisos
   useEffect(() => {
     if (id) {
-      fetchPropiedad();
+      fetchPropiedadAndValidate();
     }
   }, [id]);
 
-  const fetchPropiedad = async () => {
+  const fetchPropiedadAndValidate = async () => {
     try {
-        console.log('🔍 ID de la propiedad:', id);
-    console.log('🔍 Buscando propiedad con ID:', id);
-      const { data, error } = await supabase
+      // Obtener información del usuario
+      const userEmail = localStorage.getItem('userEmail');
+      const role = localStorage.getItem('userRole') || 'broker';
+      setUserRole(role);
+
+      let brokerId = null;
+
+      // Si no es admin, obtener broker_id
+      if (role !== 'admin' && role !== 'superadmin') {
+        const { data: usuario, error: userError } = await supabase
+          .from('usuarios')
+          .select('broker_id')
+          .eq('email', userEmail)
+          .single();
+
+        if (userError) throw userError;
+        brokerId = usuario?.broker_id;
+        setCurrentBrokerId(brokerId);
+      }
+
+      // Cargar propiedad
+      const { data: propiedad, error } = await supabase
         .from('propiedades_comerciales')
         .select('*')
         .eq('id', id)
         .single();
-console.log('📦 Data recibida de Supabase:', data);
-    console.log('❌ Error (si hay):', error);
+
       if (error) throw error;
 
-      if (data) {
+      if (!propiedad) {
+        setAccessDenied(true);
+        return;
+      }
+
+      // Validar permisos: solo admin o el broker dueño puede editar
+      if (role !== 'admin' && role !== 'superadmin' && propiedad.broker_id !== brokerId) {
+        setAccessDenied(true);
+        return;
+      }
+
+      setPropiedadBrokerId(propiedad.broker_id);
+
+      // Cargar datos en el formulario
+      if (propiedad) {
         setFormData({
           // INFORMACIÓN BÁSICA
-          nombre_plaza: data.nombre_plaza || '',
-          ubicacion: data.ubicacion || '',
-          superficie_terreno: data.superficie_terreno?.toString() || '',
-          numero_locales: data.numero_locales?.toString() || '',
+          nombre_plaza: propiedad.nombre_plaza || '',
+          ubicacion: propiedad.ubicacion || '',
+          superficie_terreno: propiedad.superficie_terreno?.toString() || '',
+          numero_locales: propiedad.numero_locales?.toString() || '',
           
           // ESTACIONAMIENTO
-          cajones_estacionamiento: data.cajones_estacionamiento?.toString() || '',
-          motopuertos: data.motopuertos?.toString() || '',
-          ciclopuertos: data.ciclopuertos?.toString() || '',
+          cajones_estacionamiento: propiedad.cajones_estacionamiento?.toString() || '',
+          motopuertos: propiedad.motopuertos?.toString() || '',
+          ciclopuertos: propiedad.ciclopuertos?.toString() || '',
           
           // COMUNICACIÓN VERTICAL
-          escaleras_estaticas: data.escaleras_estaticas || '',
-          escaleras_emergencia: data.escaleras_emergencia || '',
-          elevador: data.elevador || '',
+          escaleras_estaticas: propiedad.escaleras_estaticas || '',
+          escaleras_emergencia: propiedad.escaleras_emergencia || '',
+          elevador: propiedad.elevador || '',
           
           // EQUIPO OPERATIVO Y SERVICIOS
-          gas_lp: data.gas_lp || '',
-          gas_butano: data.gas_butano || '',
-          gas_natural: data.gas_natural || '',
-          agua: data.agua || '',
-          luz: data.luz || '',
-          extraccion_humo: data.extraccion_humo || '',
-          trampas_grasa: data.trampas_grasa || '',
-          equipo_bombero: data.equipo_bombero || '',
-          automatizacion_agua: data.automatizacion_agua || '',
-          capacidad_sisterna: data.capacidad_sisterna || '',
-          drenaje_publico: data.drenaje_publico || '',
-          paneles_solares: data.paneles_solares || '',
+          gas_lp: propiedad.gas_lp || '',
+          gas_butano: propiedad.gas_butano || '',
+          gas_natural: propiedad.gas_natural || '',
+          agua: propiedad.agua || '',
+          luz: propiedad.luz || '',
+          extraccion_humo: propiedad.extraccion_humo || '',
+          trampas_grasa: propiedad.trampas_grasa || '',
+          equipo_bombero: propiedad.equipo_bombero || '',
+          automatizacion_agua: propiedad.automatizacion_agua || '',
+          capacidad_sisterna: propiedad.capacidad_sisterna || '',
+          drenaje_publico: propiedad.drenaje_publico || '',
+          paneles_solares: propiedad.paneles_solares || '',
           
           // CONECTIVIDAD
-          transformador_bifasico: data.transformador_bifasico || '',
-          transformador_trifasico: data.transformador_trifasico || '',
-          centro_carga: data.centro_carga || '',
-          acceso_azotea: data.acceso_azotea || '',
-          acceso_trasero_pasillo_servicios: data.acceso_trasero_pasillo_servicios || '',
-          ducteria_voz_datos: data.ducteria_voz_datos || '',
+          transformador_bifasico: propiedad.transformador_bifasico || '',
+          transformador_trifasico: propiedad.transformador_trifasico || '',
+          centro_carga: propiedad.centro_carga || '',
+          acceso_azotea: propiedad.acceso_azotea || '',
+          acceso_trasero_pasillo_servicios: propiedad.acceso_trasero_pasillo_servicios || '',
+          ducteria_voz_datos: propiedad.ducteria_voz_datos || '',
           
           // ENTREGA DEL LOCAL
-          obra_gris: data.obra_gris || '',
-          obra_blanca: data.obra_blanca || '',
-          obra_negra: data.obra_negra || '',
-          concreto_pulido_piso: data.concreto_pulido_piso || '',
-          canalizacion_voz_datos: data.canalizacion_voz_datos || '',
-          preparacion_hidraulica_electrica_sanitaria: data.preparacion_hidraulica_electrica_sanitaria || '',
-          puertas_cristal_aluminio_ventanales: data.puertas_cristal_aluminio_ventanales || '',
-          muros_divisorios: data.muros_divisorios || '',
-          salida_hidrosanitarias: data.salida_hidrosanitarias || '',
-          acometida_electrica_telefonia_tv_subterranea: data.acometida_electrica_telefonia_tv_subterranea || '',
-          preparacion_drenaje_wc: data.preparacion_drenaje_wc || '',
-          preparacion_mini_split_aire_acondicionado: data.preparacion_mini_split_aire_acondicionado || '',
-          valvulas_linea_agua_potable: data.valvulas_linea_agua_potable || '',
-          interruptor_electrico_principal: data.interruptor_electrico_principal || '',
+          obra_gris: propiedad.obra_gris || '',
+          obra_blanca: propiedad.obra_blanca || '',
+          obra_negra: propiedad.obra_negra || '',
+          concreto_pulido_piso: propiedad.concreto_pulido_piso || '',
+          canalizacion_voz_datos: propiedad.canalizacion_voz_datos || '',
+          preparacion_hidraulica_electrica_sanitaria: propiedad.preparacion_hidraulica_electrica_sanitaria || '',
+          puertas_cristal_aluminio_ventanales: propiedad.puertas_cristal_aluminio_ventanales || '',
+          muros_divisorios: propiedad.muros_divisorios || '',
+          salida_hidrosanitarias: propiedad.salida_hidrosanitarias || '',
+          acometida_electrica_telefonia_tv_subterranea: propiedad.acometida_electrica_telefonia_tv_subterranea || '',
+          preparacion_drenaje_wc: propiedad.preparacion_drenaje_wc || '',
+          preparacion_mini_split_aire_acondicionado: propiedad.preparacion_mini_split_aire_acondicionado || '',
+          valvulas_linea_agua_potable: propiedad.valvulas_linea_agua_potable || '',
+          interruptor_electrico_principal: propiedad.interruptor_electrico_principal || '',
           
           // INFORMACIÓN DEL INMUEBLE
-          altura_piso_techo_planta_baja: data.altura_piso_techo_planta_baja?.toString() || '',
-          altura_piso_techo_planta_alta: data.altura_piso_techo_planta_alta?.toString() || '',
-          banos_publicos: data.banos_publicos || '',
-          circuito_cerrado: data.circuito_cerrado || '',
-          seguridad_24hrs: data.seguridad_24hrs || '',
-          modulo_administracion: data.modulo_administracion || '',
+          altura_piso_techo_planta_baja: propiedad.altura_piso_techo_planta_baja?.toString() || '',
+          altura_piso_techo_planta_alta: propiedad.altura_piso_techo_planta_alta?.toString() || '',
+          banos_publicos: propiedad.banos_publicos || '',
+          circuito_cerrado: propiedad.circuito_cerrado || '',
+          seguridad_24hrs: propiedad.seguridad_24hrs || '',
+          modulo_administracion: propiedad.modulo_administracion || '',
           
           // DOCUMENTOS PARA ARRENDAMIENTOS
-          reglamento_general_plaza: data.reglamento_general_plaza || '',
-          acta_entrega_local: data.acta_entrega_local || '',
-          totem_precios: data.totem_precios || '',
-          anuncio_luminoso_normal: data.anuncio_luminoso_normal || '',
-          reglamento_colocacion_anuncio: data.reglamento_colocacion_anuncio || '',
-          seguro_local: data.seguro_local || '',
+          reglamento_general_plaza: propiedad.reglamento_general_plaza || '',
+          acta_entrega_local: propiedad.acta_entrega_local || '',
+          totem_precios: propiedad.totem_precios || '',
+          anuncio_luminoso_normal: propiedad.anuncio_luminoso_normal || '',
+          reglamento_colocacion_anuncio: propiedad.reglamento_colocacion_anuncio || '',
+          seguro_local: propiedad.seguro_local || '',
           
           // CONDICIONES DE ARRENDAMIENTO
-          contrato_justicia_alternativa: data.contrato_justicia_alternativa || '',
-          investigacion: data.investigacion || '',
-          anos_forzoso_contrato: data.anos_forzoso_contrato || '',
-          anos_opcionales_contrato: data.anos_opcionales_contrato || '',
-          meses_renta_adelantada: data.meses_renta_adelantada?.toString() || '',
-          meses_deposito: data.meses_deposito?.toString() || '',
-          inpc: data.inpc || '',
-          meses_gracia: data.meses_gracia?.toString() || '',
-          mantenimiento: data.mantenimiento || '',
-          exclusividad_giro: data.exclusividad_giro || '',
-          entrega_locales: data.entrega_locales || '',
+          contrato_justicia_alternativa: propiedad.contrato_justicia_alternativa || '',
+          investigacion: propiedad.investigacion || '',
+          anos_forzoso_contrato: propiedad.anos_forzoso_contrato || '',
+          anos_opcionales_contrato: propiedad.anos_opcionales_contrato || '',
+          meses_renta_adelantada: propiedad.meses_renta_adelantada?.toString() || '',
+          meses_deposito: propiedad.meses_deposito?.toString() || '',
+          inpc: propiedad.inpc || '',
+          meses_gracia: propiedad.meses_gracia?.toString() || '',
+          mantenimiento: propiedad.mantenimiento || '',
+          exclusividad_giro: propiedad.exclusividad_giro || '',
+          entrega_locales: propiedad.entrega_locales || '',
           
           // PRECIOS Y RENTAS
-          precio_venta: data.precio_venta?.toString() || '',
-          renta_mensual: data.renta_mensual?.toString() || '',
-          cuota_mantenimiento: data.cuota_mantenimiento?.toString() || '',
+          precio_venta: propiedad.precio_venta?.toString() || '',
+          renta_mensual: propiedad.renta_mensual?.toString() || '',
+          cuota_mantenimiento: propiedad.cuota_mantenimiento?.toString() || '',
           
           // OBSERVACIONES GENERALES
-          observaciones_generales: data.observaciones_generales || '',
-          especificaciones_adicionales: data.especificaciones_adicionales || ''
+          observaciones_generales: propiedad.observaciones_generales || '',
+          especificaciones_adicionales: propiedad.especificaciones_adicionales || ''
         });
       }
     } catch (error) {
-      console.error('Error fetching propiedad:', error);
-      alert('Error al cargar la propiedad');
+      console.error('Error:', error);
+      setAccessDenied(true);
     } finally {
       setFetching(false);
     }
@@ -361,6 +397,37 @@ console.log('📦 Data recibida de Supabase:', data);
     }
   };
 
+  // Si acceso denegado
+  if (accessDenied) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#f8f9fa', padding: '32px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚫</div>
+          <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#2d3436', marginBottom: '16px' }}>
+            Acceso Denegado
+          </h1>
+          <p style={{ color: '#64748b', marginBottom: '24px' }}>
+            No tienes permisos para editar esta propiedad.
+          </p>
+          <Link
+            href="/dashboard/propiedades/comercial"
+            style={{
+              padding: '12px 24px',
+              background: '#181f42',
+              color: 'white',
+              textDecoration: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            Volver a Propiedades Comerciales
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const sections = [
     { id: 'basica', label: 'Información Básica', icon: '📋' },
     { id: 'estacionamiento', label: 'Estacionamiento', icon: '🚗' },
@@ -374,6 +441,7 @@ console.log('📦 Data recibida de Supabase:', data);
     { id: 'precios', label: 'Precios y Rentas', icon: '💰' },
     { id: 'observaciones', label: 'Observaciones', icon: '📋' }
   ];
+
 const renderSection = () => {
   switch(activeSection) {
     case 'basica':

@@ -23,6 +23,8 @@ interface PropiedadResidencial {
   cocheras: number;
   estatus: string;
   destacado: boolean;
+  broker_id: string;
+  broker_nombre?: string;
 }
 
 export default function ListaPropiedadesResidenciales() {
@@ -32,6 +34,7 @@ export default function ListaPropiedadesResidenciales() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('todos');
   const [filtroEstatus, setFiltroEstatus] = useState('todos');
+  const [userRole, setUserRole] = useState('');
 
   useEffect(() => {
     fetchPropiedades();
@@ -39,13 +42,59 @@ export default function ListaPropiedadesResidenciales() {
 
   const fetchPropiedades = async () => {
     try {
-      const { data, error } = await supabase
+      // Obtener información del usuario logueado
+      const userEmail = localStorage.getItem('userEmail');
+      const role = localStorage.getItem('userRole') || 'broker';
+      setUserRole(role);
+
+      if (!userEmail) {
+        console.error('No user email found');
+        return;
+      }
+
+      let brokerId = null;
+
+      // Si no es admin, obtener broker_id del usuario
+      if (role !== 'admin' && role !== 'superadmin') {
+        const { data: usuario, error: userError } = await supabase
+          .from('usuarios')
+          .select('broker_id')
+          .eq('email', userEmail)
+          .single();
+
+        if (userError) {
+          console.error('Error fetching user:', userError);
+          throw userError;
+        }
+
+        brokerId = usuario?.broker_id;
+      }
+
+      // Consulta base con JOIN para obtener nombre del broker
+      let query = supabase
         .from('propiedades_residenciales')
-        .select('*')
+        .select(`
+          *,
+          brokers!inner(nombre)
+        `)
         .order('creado_en', { ascending: false });
 
+      // Aplicar filtro por broker si no es admin
+      if (brokerId) {
+        query = query.eq('broker_id', brokerId);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
-      setPropiedades(data || []);
+
+      // Transformar datos para incluir broker_nombre
+      const propiedadesConBroker = (data || []).map(propiedad => ({
+        ...propiedad,
+        broker_nombre: propiedad.brokers?.nombre || 'Sin broker'
+      }));
+
+      setPropiedades(propiedadesConBroker);
     } catch (error) {
       console.error('Error fetching propiedades:', error);
     } finally {
@@ -86,7 +135,8 @@ export default function ListaPropiedadesResidenciales() {
   const filteredPropiedades = propiedades.filter(propiedad => {
     const matchesSearch = propiedad.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          propiedad.ciudad.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         propiedad.colonia.toLowerCase().includes(searchTerm.toLowerCase());
+                         propiedad.colonia.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         propiedad.broker_nombre?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesTipo = filtroTipo === 'todos' || propiedad.tipo_propiedad === filtroTipo;
     const matchesEstatus = filtroEstatus === 'todos' || propiedad.estatus === filtroEstatus;
@@ -162,7 +212,9 @@ export default function ListaPropiedadesResidenciales() {
                 Propiedades Residenciales
               </h1>
               <p style={{ color: '#64748b', fontSize: '16px' }}>
-                Gestión de casas, departamentos y terrenos residenciales
+                {userRole === 'admin' || userRole === 'superadmin' 
+                  ? 'Todas las propiedades - Vista Administrador' 
+                  : 'Mis propiedades - Vista Broker'}
               </p>
             </div>
             <Link
@@ -245,7 +297,7 @@ export default function ListaPropiedadesResidenciales() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Buscar por título, ciudad o colonia..."
+                  placeholder="Buscar por título, ciudad, colonia o broker..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{ 
@@ -325,12 +377,13 @@ export default function ListaPropiedadesResidenciales() {
           borderRadius: '12px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
           border: '1px solid #e2e8f0',
-          overflowX: 'auto',
-          overflow: 'hidden'
+          overflowX: 'auto'
         }}>
           <div style={{ 
             display: 'grid',
-            gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr auto',
+            gridTemplateColumns: userRole === 'admin' || userRole === 'superadmin' 
+              ? '2fr 1fr 1fr 1fr 1fr 1fr 1fr auto' 
+              : '2fr 1fr 1fr 1fr 1fr 1fr auto',
             gap: '16px',
             padding: '20px',
             background: '#f8fafc',
@@ -341,6 +394,7 @@ export default function ListaPropiedadesResidenciales() {
           }}>
             <div>Propiedad</div>
             <div>Tipo</div>
+            {(userRole === 'admin' || userRole === 'superadmin') && <div>Broker</div>}
             <div>Ubicación</div>
             <div>Precio</div>
             <div>Características</div>
@@ -354,7 +408,9 @@ export default function ListaPropiedadesResidenciales() {
                 key={propiedad.id}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr auto',
+                  gridTemplateColumns: userRole === 'admin' || userRole === 'superadmin' 
+                    ? '2fr 1fr 1fr 1fr 1fr 1fr 1fr auto' 
+                    : '2fr 1fr 1fr 1fr 1fr 1fr auto',
                   gap: '16px',
                   padding: '20px',
                   borderBottom: '1px solid #f1f5f9',
@@ -383,6 +439,13 @@ export default function ListaPropiedadesResidenciales() {
                     {propiedad.tipo_propiedad}
                   </span>
                 </div>
+
+                {/* Broker (solo para admin/superadmin) */}
+                {(userRole === 'admin' || userRole === 'superadmin') && (
+                  <div style={{ color: '#2d3436', fontSize: '14px', fontWeight: '500' }}>
+                    {propiedad.broker_nombre}
+                  </div>
+                )}
 
                 {/* Ubicación */}
                 <div>

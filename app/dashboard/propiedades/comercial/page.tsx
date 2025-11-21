@@ -12,12 +12,19 @@ interface PropiedadComercial {
   cajones_estacionamiento: number;
   renta_mensual: number;
   precio_venta: number;
+  broker_id: string;
+  broker_nombre?: string;
+  estatus?: string;
+  creado_en?: string;
 }
 
 export default function PropiedadesComercialPage() {
   const [propiedades, setPropiedades] = useState<PropiedadComercial[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filtroEstatus, setFiltroEstatus] = useState('todos');
+  const [userRole, setUserRole] = useState('');
 
   useEffect(() => {
     fetchPropiedades();
@@ -25,13 +32,59 @@ export default function PropiedadesComercialPage() {
 
   const fetchPropiedades = async () => {
     try {
-      const { data, error } = await supabase
+      // Obtener información del usuario logueado
+      const userEmail = localStorage.getItem('userEmail');
+      const role = localStorage.getItem('userRole') || 'broker';
+      setUserRole(role);
+
+      if (!userEmail) {
+        console.error('No user email found');
+        return;
+      }
+
+      let brokerId = null;
+
+      // Si no es admin, obtener broker_id del usuario
+      if (role !== 'admin' && role !== 'superadmin') {
+        const { data: usuario, error: userError } = await supabase
+          .from('usuarios')
+          .select('broker_id')
+          .eq('email', userEmail)
+          .single();
+
+        if (userError) {
+          console.error('Error fetching user:', userError);
+          throw userError;
+        }
+
+        brokerId = usuario?.broker_id;
+      }
+
+      // Consulta base con JOIN para obtener nombre del broker
+      let query = supabase
         .from('propiedades_comerciales')
-        .select('*')
+        .select(`
+          *,
+          brokers!inner(nombre)
+        `)
         .order('creado_en', { ascending: false });
 
+      // Aplicar filtro por broker si no es admin
+      if (brokerId) {
+        query = query.eq('broker_id', brokerId);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
-      setPropiedades(data || []);
+
+      // Transformar datos para incluir broker_nombre
+      const propiedadesConBroker = (data || []).map(propiedad => ({
+        ...propiedad,
+        broker_nombre: propiedad.brokers?.nombre || 'Sin broker'
+      }));
+
+      setPropiedades(propiedadesConBroker);
     } catch (error) {
       console.error('Error fetching propiedades:', error);
     } finally {
@@ -69,6 +122,31 @@ export default function PropiedadesComercialPage() {
     }
   };
 
+  const filteredPropiedades = propiedades.filter(propiedad => {
+    const matchesSearch = propiedad.nombre_plaza?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         propiedad.ubicacion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         propiedad.broker_nombre?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesEstatus = filtroEstatus === 'todos' || propiedad.estatus === filtroEstatus;
+
+    return matchesSearch && matchesEstatus;
+  });
+
+  const estatusOptions = ['todos', 'disponible', 'ocupado', 'en_construccion'];
+
+  const getEstatusBadgeStyle = (estatus: string) => {
+    switch (estatus) {
+      case 'disponible':
+        return { background: '#dcfce7', color: '#166534' };
+      case 'ocupado':
+        return { background: '#fef3c7', color: '#92400e' };
+      case 'en_construccion':
+        return { background: '#dbeafe', color: '#1e40af' };
+      default:
+        return { background: '#f3f4f6', color: '#374151' };
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', background: '#f8f9fa', padding: '32px' }}>
@@ -103,13 +181,15 @@ export default function PropiedadesComercialPage() {
           </Link>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#2d3436', marginBottom: '8px' }}>
               Propiedades Comerciales
             </h1>
             <p style={{ color: '#64748b', fontSize: '16px' }}>
-              Gestión de plazas comerciales y locales
+              {userRole === 'admin' || userRole === 'superadmin' 
+                ? 'Todas las propiedades comerciales - Vista Administrador' 
+                : 'Mis propiedades comerciales - Vista Broker'}
             </p>
           </div>
           <Link
@@ -126,6 +206,60 @@ export default function PropiedadesComercialPage() {
           >
             + Nueva Propiedad
           </Link>
+        </div>
+
+        {/* Filtros y Búsqueda */}
+        <div style={{ 
+          background: '#f8fafc', 
+          padding: '20px',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0'
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px', marginBottom: '16px' }}>
+            {/* Filtro Estatus */}
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151', fontSize: '14px' }}>
+                Estatus
+              </label>
+              <select
+                value={filtroEstatus}
+                onChange={(e) => setFiltroEstatus(e.target.value)}
+                style={{ 
+                  width: '100%', 
+                  padding: '12px 16px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              >
+                {estatusOptions.map(estatus => (
+                  <option key={estatus} value={estatus}>
+                    {estatus === 'todos' ? 'Todos los estatus' : estatus.charAt(0).toUpperCase() + estatus.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Búsqueda */}
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151', fontSize: '14px' }}>
+                Buscar
+              </label>
+              <input
+                type="text"
+                placeholder="Buscar por nombre, ubicación o broker..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ 
+                  width: '100%', 
+                  padding: '12px 16px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -201,6 +335,11 @@ export default function PropiedadesComercialPage() {
                   <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>
                     Plaza Comercial
                   </th>
+                  {(userRole === 'admin' || userRole === 'superadmin') && (
+                    <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>
+                      Broker
+                    </th>
+                  )}
                   <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>
                     Ubicación
                   </th>
@@ -214,18 +353,28 @@ export default function PropiedadesComercialPage() {
                     Renta Mensual
                   </th>
                   <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>
+                    Estatus
+                  </th>
+                  <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>
                     Acciones
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {propiedades.map((propiedad) => (
+                {filteredPropiedades.map((propiedad) => (
                   <tr key={propiedad.id} style={{ borderTop: '1px solid #e2e8f0' }}>
                     <td style={{ padding: '16px' }}>
                       <div style={{ fontWeight: '600', color: '#2d3436' }}>
                         {propiedad.nombre_plaza || 'Sin nombre'}
                       </div>
                     </td>
+                    {(userRole === 'admin' || userRole === 'superadmin') && (
+                      <td style={{ padding: '16px' }}>
+                        <div style={{ color: '#2d3436', fontWeight: '500' }}>
+                          {propiedad.broker_nombre || 'Sin broker'}
+                        </div>
+                      </td>
+                    )}
                     <td style={{ padding: '16px' }}>
                       <div style={{ color: '#2d3436' }}>{propiedad.ubicacion || 'Sin ubicación'}</div>
                     </td>
@@ -243,6 +392,19 @@ export default function PropiedadesComercialPage() {
                       <div style={{ fontWeight: '600', color: '#181f42' }}>
                         {propiedad.renta_mensual ? `$${propiedad.renta_mensual.toLocaleString()}` : 'Consultar'}
                       </div>
+                    </td>
+                    <td style={{ padding: '16px' }}>
+                      <span
+                        style={{
+                          padding: '4px 12px',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          ...getEstatusBadgeStyle(propiedad.estatus || 'disponible')
+                        }}
+                      >
+                        {propiedad.estatus || 'disponible'}
+                      </span>
                     </td>
                     <td style={{ padding: '16px' }}>
                       <div style={{ display: 'flex', gap: '12px' }}>
@@ -279,7 +441,7 @@ export default function PropiedadesComercialPage() {
             </table>
           </div>
 
-          {propiedades.length === 0 && (
+          {filteredPropiedades.length === 0 && (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
               <div style={{ fontSize: '48px', marginBottom: '16px', opacity: '0.5' }}>🛍️</div>
               <h3 style={{ marginBottom: '8px', color: '#2d3436' }}>No hay propiedades comerciales</h3>

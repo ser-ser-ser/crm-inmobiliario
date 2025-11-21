@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
@@ -9,6 +9,7 @@ export default function AgregarPropiedadComercial() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState('basica');
+  const [currentBrokerId, setCurrentBrokerId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     // INFORMACIÓN BÁSICA
@@ -104,6 +105,33 @@ export default function AgregarPropiedadComercial() {
     especificaciones_adicionales: ''
   });
 
+  // Obtener broker_id del usuario logueado
+  useEffect(() => {
+    const getCurrentBroker = async () => {
+      try {
+        const userEmail = localStorage.getItem('userEmail');
+        const role = localStorage.getItem('userRole') || 'broker';
+
+        if (!userEmail || role === 'admin' || role === 'superadmin') {
+          return; // Admin no necesita broker_id automático
+        }
+
+        const { data: usuario, error } = await supabase
+          .from('usuarios')
+          .select('broker_id')
+          .eq('email', userEmail)
+          .single();
+
+        if (error) throw error;
+        setCurrentBrokerId(usuario?.broker_id || null);
+      } catch (error) {
+        console.error('Error obteniendo broker:', error);
+      }
+    };
+
+    getCurrentBroker();
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -123,101 +151,106 @@ export default function AgregarPropiedadComercial() {
     setLoading(true);
 
     try {
+      const propiedadData = {
+        // INFORMACIÓN BÁSICA
+        nombre_plaza: formData.nombre_plaza,
+        ubicacion: formData.ubicacion,
+        superficie_terreno: formData.superficie_terreno ? parseFloat(formData.superficie_terreno) : null,
+        numero_locales: formData.numero_locales ? parseInt(formData.numero_locales) : null,
+        
+        // ESTACIONAMIENTO
+        cajones_estacionamiento: formData.cajones_estacionamiento ? parseInt(formData.cajones_estacionamiento) : null,
+        motopuertos: formData.motopuertos ? parseInt(formData.motopuertos) : null,
+        ciclopuertos: formData.ciclopuertos ? parseInt(formData.ciclopuertos) : null,
+        
+        // COMUNICACIÓN VERTICAL
+        escaleras_estaticas: formData.escaleras_estaticas,
+        escaleras_emergencia: formData.escaleras_emergencia,
+        elevador: formData.elevador,
+        
+        // EQUIPO OPERATIVO Y SERVICIOS
+        gas_lp: formData.gas_lp,
+        gas_butano: formData.gas_butano,
+        gas_natural: formData.gas_natural,
+        agua: formData.agua,
+        luz: formData.luz,
+        extraccion_humo: formData.extraccion_humo,
+        trampas_grasa: formData.trampas_grasa,
+        equipo_bombero: formData.equipo_bombero,
+        automatizacion_agua: formData.automatizacion_agua,
+        capacidad_sisterna: formData.capacidad_sisterna,
+        drenaje_publico: formData.drenaje_publico,
+        paneles_solares: formData.paneles_solares,
+        
+        // CONECTIVIDAD
+        transformador_bifasico: formData.transformador_bifasico,
+        transformador_trifasico: formData.transformador_trifasico,
+        centro_carga: formData.centro_carga,
+        acceso_azotea: formData.acceso_azotea,
+        acceso_trasero_pasillo_servicios: formData.acceso_trasero_pasillo_servicios,
+        ducteria_voz_datos: formData.ducteria_voz_datos,
+        
+        // ENTREGA DEL LOCAL
+        obra_gris: formData.obra_gris,
+        obra_blanca: formData.obra_blanca,
+        obra_negra: formData.obra_negra,
+        concreto_pulido_piso: formData.concreto_pulido_piso,
+        canalizacion_voz_datos: formData.canalizacion_voz_datos,
+        preparacion_hidraulica_electrica_sanitaria: formData.preparacion_hidraulica_electrica_sanitaria,
+        puertas_cristal_aluminio_ventanales: formData.puertas_cristal_aluminio_ventanales,
+        muros_divisorios: formData.muros_divisorios,
+        salida_hidrosanitarias: formData.salida_hidrosanitarias,
+        acometida_electrica_telefonia_tv_subterranea: formData.acometida_electrica_telefonia_tv_subterranea,
+        preparacion_drenaje_wc: formData.preparacion_drenaje_wc,
+        preparacion_mini_split_aire_acondicionado: formData.preparacion_mini_split_aire_acondicionado,
+        valvulas_linea_agua_potable: formData.valvulas_linea_agua_potable,
+        interruptor_electrico_principal: formData.interruptor_electrico_principal,
+        
+        // INFORMACIÓN DEL INMUEBLE
+        altura_piso_techo_planta_baja: formData.altura_piso_techo_planta_baja ? parseFloat(formData.altura_piso_techo_planta_baja) : null,
+        altura_piso_techo_planta_alta: formData.altura_piso_techo_planta_alta ? parseFloat(formData.altura_piso_techo_planta_alta) : null,
+        banos_publicos: formData.banos_publicos,
+        circuito_cerrado: formData.circuito_cerrado,
+        seguridad_24hrs: formData.seguridad_24hrs,
+        modulo_administracion: formData.modulo_administracion,
+        
+        // DOCUMENTOS PARA ARRENDAMIENTOS
+        reglamento_general_plaza: formData.reglamento_general_plaza,
+        acta_entrega_local: formData.acta_entrega_local,
+        totem_precios: formData.totem_precios,
+        anuncio_luminoso_normal: formData.anuncio_luminoso_normal,
+        reglamento_colocacion_anuncio: formData.reglamento_colocacion_anuncio,
+        seguro_local: formData.seguro_local,
+        
+        // CONDICIONES DE ARRENDAMIENTO
+        contrato_justicia_alternativa: formData.contrato_justicia_alternativa,
+        investigacion: formData.investigacion,
+        anos_forzoso_contrato: formData.anos_forzoso_contrato,
+        anos_opcionales_contrato: formData.anos_opcionales_contrato,
+        meses_renta_adelantada: formData.meses_renta_adelantada ? parseInt(formData.meses_renta_adelantada) : null,
+        meses_deposito: formData.meses_deposito ? parseInt(formData.meses_deposito) : null,
+        inpc: formData.inpc,
+        meses_gracia: formData.meses_gracia ? parseInt(formData.meses_gracia) : null,
+        mantenimiento: formData.mantenimiento,
+        exclusividad_giro: formData.exclusividad_giro,
+        entrega_locales: formData.entrega_locales,
+        
+        // PRECIOS Y RENTAS
+        precio_venta: formatCurrency(formData.precio_venta),
+        renta_mensual: formatCurrency(formData.renta_mensual),
+        cuota_mantenimiento: formatCurrency(formData.cuota_mantenimiento),
+        
+        // OBSERVACIONES GENERALES
+        observaciones_generales: formData.observaciones_generales,
+        especificaciones_adicionales: formData.especificaciones_adicionales,
+
+        // AGREGAR BROKER_ID AUTOMÁTICAMENTE
+        broker_id: currentBrokerId
+      };
+
       const { data, error } = await supabase
         .from('propiedades_comerciales')
-        .insert([{
-          // INFORMACIÓN BÁSICA
-          nombre_plaza: formData.nombre_plaza,
-          ubicacion: formData.ubicacion,
-          superficie_terreno: formData.superficie_terreno ? parseFloat(formData.superficie_terreno) : null,
-          numero_locales: formData.numero_locales ? parseInt(formData.numero_locales) : null,
-          
-          // ESTACIONAMIENTO
-          cajones_estacionamiento: formData.cajones_estacionamiento ? parseInt(formData.cajones_estacionamiento) : null,
-          motopuertos: formData.motopuertos ? parseInt(formData.motopuertos) : null,
-          ciclopuertos: formData.ciclopuertos ? parseInt(formData.ciclopuertos) : null,
-          
-          // COMUNICACIÓN VERTICAL
-          escaleras_estaticas: formData.escaleras_estaticas,
-          escaleras_emergencia: formData.escaleras_emergencia,
-          elevador: formData.elevador,
-          
-          // EQUIPO OPERATIVO Y SERVICIOS
-          gas_lp: formData.gas_lp,
-          gas_butano: formData.gas_butano,
-          gas_natural: formData.gas_natural,
-          agua: formData.agua,
-          luz: formData.luz,
-          extraccion_humo: formData.extraccion_humo,
-          trampas_grasa: formData.trampas_grasa,
-          equipo_bombero: formData.equipo_bombero,
-          automatizacion_agua: formData.automatizacion_agua,
-          capacidad_sisterna: formData.capacidad_sisterna,
-          drenaje_publico: formData.drenaje_publico,
-          paneles_solares: formData.paneles_solares,
-          
-          // CONECTIVIDAD
-          transformador_bifasico: formData.transformador_bifasico,
-          transformador_trifasico: formData.transformador_trifasico,
-          centro_carga: formData.centro_carga,
-          acceso_azotea: formData.acceso_azotea,
-          acceso_trasero_pasillo_servicios: formData.acceso_trasero_pasillo_servicios,
-          ducteria_voz_datos: formData.ducteria_voz_datos,
-          
-          // ENTREGA DEL LOCAL
-          obra_gris: formData.obra_gris,
-          obra_blanca: formData.obra_blanca,
-          obra_negra: formData.obra_negra,
-          concreto_pulido_piso: formData.concreto_pulido_piso,
-          canalizacion_voz_datos: formData.canalizacion_voz_datos,
-          preparacion_hidraulica_electrica_sanitaria: formData.preparacion_hidraulica_electrica_sanitaria,
-          puertas_cristal_aluminio_ventanales: formData.puertas_cristal_aluminio_ventanales,
-          muros_divisorios: formData.muros_divisorios,
-          salida_hidrosanitarias: formData.salida_hidrosanitarias,
-          acometida_electrica_telefonia_tv_subterranea: formData.acometida_electrica_telefonia_tv_subterranea,
-          preparacion_drenaje_wc: formData.preparacion_drenaje_wc,
-          preparacion_mini_split_aire_acondicionado: formData.preparacion_mini_split_aire_acondicionado,
-          valvulas_linea_agua_potable: formData.valvulas_linea_agua_potable,
-          interruptor_electrico_principal: formData.interruptor_electrico_principal,
-          
-          // INFORMACIÓN DEL INMUEBLE
-          altura_piso_techo_planta_baja: formData.altura_piso_techo_planta_baja ? parseFloat(formData.altura_piso_techo_planta_baja) : null,
-          altura_piso_techo_planta_alta: formData.altura_piso_techo_planta_alta ? parseFloat(formData.altura_piso_techo_planta_alta) : null,
-          banos_publicos: formData.banos_publicos,
-          circuito_cerrado: formData.circuito_cerrado,
-          seguridad_24hrs: formData.seguridad_24hrs,
-          modulo_administracion: formData.modulo_administracion,
-          
-          // DOCUMENTOS PARA ARRENDAMIENTOS
-          reglamento_general_plaza: formData.reglamento_general_plaza,
-          acta_entrega_local: formData.acta_entrega_local,
-          totem_precios: formData.totem_precios,
-          anuncio_luminoso_normal: formData.anuncio_luminoso_normal,
-          reglamento_colocacion_anuncio: formData.reglamento_colocacion_anuncio,
-          seguro_local: formData.seguro_local,
-          
-          // CONDICIONES DE ARRENDAMIENTO
-          contrato_justicia_alternativa: formData.contrato_justicia_alternativa,
-          investigacion: formData.investigacion,
-          anos_forzoso_contrato: formData.anos_forzoso_contrato,
-          anos_opcionales_contrato: formData.anos_opcionales_contrato,
-          meses_renta_adelantada: formData.meses_renta_adelantada ? parseInt(formData.meses_renta_adelantada) : null,
-          meses_deposito: formData.meses_deposito ? parseInt(formData.meses_deposito) : null,
-          inpc: formData.inpc,
-          meses_gracia: formData.meses_gracia ? parseInt(formData.meses_gracia) : null,
-          mantenimiento: formData.mantenimiento,
-          exclusividad_giro: formData.exclusividad_giro,
-          entrega_locales: formData.entrega_locales,
-          
-          // PRECIOS Y RENTAS
-          precio_venta: formatCurrency(formData.precio_venta),
-          renta_mensual: formatCurrency(formData.renta_mensual),
-          cuota_mantenimiento: formatCurrency(formData.cuota_mantenimiento),
-          
-          // OBSERVACIONES GENERALES
-          observaciones_generales: formData.observaciones_generales,
-          especificaciones_adicionales: formData.especificaciones_adicionales
-        }])
+        .insert([propiedadData])
         .select();
 
       if (error) {

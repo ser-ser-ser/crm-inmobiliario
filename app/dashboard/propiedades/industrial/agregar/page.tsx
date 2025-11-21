@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
@@ -9,6 +9,7 @@ export default function AgregarPropiedadIndustrial() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState('basica');
+  const [currentBrokerId, setCurrentBrokerId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     // INFORMACIÓN BÁSICA
@@ -67,6 +68,33 @@ export default function AgregarPropiedadIndustrial() {
     observaciones: ''
   });
 
+  // Obtener broker_id del usuario logueado
+  useEffect(() => {
+    const getCurrentBroker = async () => {
+      try {
+        const userEmail = localStorage.getItem('userEmail');
+        const role = localStorage.getItem('userRole') || 'broker';
+
+        if (!userEmail || role === 'admin' || role === 'superadmin') {
+          return; // Admin no necesita broker_id automático
+        }
+
+        const { data: usuario, error } = await supabase
+          .from('usuarios')
+          .select('broker_id')
+          .eq('email', userEmail)
+          .single();
+
+        if (error) throw error;
+        setCurrentBrokerId(usuario?.broker_id || null);
+      } catch (error) {
+        console.error('Error obteniendo broker:', error);
+      }
+    };
+
+    getCurrentBroker();
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -80,64 +108,69 @@ export default function AgregarPropiedadIndustrial() {
     setLoading(true);
 
     try {
+      const propiedadData = {
+        // INFORMACIÓN BÁSICA
+        marca: formData.marca,
+        giro_industrial: formData.giro_industrial,
+        ubicacion_coordenadas: formData.ubicacion_coordenadas,
+        radio_expansion: formData.radio_expansion,
+        accesos_conectividad: formData.accesos_conectividad,
+        precio_mn: formData.precio_mn ? parseFloat(formData.precio_mn) : null,
+        cuota_mantenimiento: formData.cuota_mantenimiento ? parseFloat(formData.cuota_mantenimiento) : null,
+        total_renta_cuota: formData.total_renta_cuota ? parseFloat(formData.total_renta_cuota) : null,
+        precio_m2: formData.precio_m2 ? parseFloat(formData.precio_m2) : null,
+
+        // ESPECIFICACIONES TÉCNICAS
+        superficie_total: formData.superficie_total ? parseFloat(formData.superficie_total) : null,
+        superficie_almacen: formData.superficie_almacen ? parseFloat(formData.superficie_almacen) : null,
+        oficinas_m2: formData.oficinas_m2 ? parseFloat(formData.oficinas_m2) : null,
+        tipo_nave: formData.tipo_nave,
+        altura_minima: formData.altura_minima ? parseFloat(formData.altura_minima) : null,
+        año_construccion: formData.año_construccion ? parseInt(formData.año_construccion) : null,
+        capacidad_carga_piso: formData.capacidad_carga_piso ? parseFloat(formData.capacidad_carga_piso) : null,
+        capacidad_electrica: formData.capacidad_electrica ? parseFloat(formData.capacidad_electrica) : null,
+        tension_electrica: formData.tension_electrica,
+
+        // INSTALACIONES Y SERVICIOS
+        conectividad_fibra: formData.conectividad_fibra,
+        energia_renovable: formData.energia_renovable,
+        aislante_techo: formData.aislante_techo,
+        tragaluz_natural: formData.tragaluz_natural,
+        sistema_extraccion: formData.sistema_extraccion,
+        andenes_carga: formData.andenes_carga,
+        sellos_andenes: formData.sellos_andenes,
+        rampas_nivel: formData.rampas_nivel,
+        iluminacion_led: formData.iluminacion_led,
+        sistema_incendio: formData.sistema_incendio,
+
+        // DOCUMENTACIÓN
+        uso_suelo: formData.uso_suelo,
+        documentacion_regla: formData.documentacion_regla,
+
+        // SERVICIOS COMPLEMENTARIOS
+        banos_vestidores: formData.banos_vestidores,
+        regaderas: formData.regaderas,
+        comedor: formData.comedor,
+        accesos_independientes: formData.accesos_independientes,
+        caseta_seguridad: formData.caseta_seguridad,
+        estacionamiento: formData.estacionamiento,
+        terreno_camiones: formData.terreno_camiones,
+        rutas_transporte: formData.rutas_transporte,
+        servicios_agua: formData.servicios_agua,
+        via_ferrocarril: formData.via_ferrocarril,
+        total_pallet: formData.total_pallet,
+
+        // OBSERVACIONES
+        especificaciones_adicionales: formData.especificaciones_adicionales,
+        observaciones: formData.observaciones,
+
+        // AGREGAR BROKER_ID AUTOMÁTICAMENTE
+        broker_id: currentBrokerId
+      };
+
       const { data, error } = await supabase
         .from('propiedades_industriales')
-        .insert([{
-          // INFORMACIÓN BÁSICA
-          marca: formData.marca,
-          giro_industrial: formData.giro_industrial,
-          ubicacion_coordenadas: formData.ubicacion_coordenadas,
-          radio_expansion: formData.radio_expansion,
-          accesos_conectividad: formData.accesos_conectividad,
-          precio_mn: formData.precio_mn ? parseFloat(formData.precio_mn) : null,
-          cuota_mantenimiento: formData.cuota_mantenimiento ? parseFloat(formData.cuota_mantenimiento) : null,
-          total_renta_cuota: formData.total_renta_cuota ? parseFloat(formData.total_renta_cuota) : null,
-          precio_m2: formData.precio_m2 ? parseFloat(formData.precio_m2) : null,
-
-          // ESPECIFICACIONES TÉCNICAS
-          superficie_total: formData.superficie_total ? parseFloat(formData.superficie_total) : null,
-          superficie_almacen: formData.superficie_almacen ? parseFloat(formData.superficie_almacen) : null,
-          oficinas_m2: formData.oficinas_m2 ? parseFloat(formData.oficinas_m2) : null,
-          tipo_nave: formData.tipo_nave,
-          altura_minima: formData.altura_minima ? parseFloat(formData.altura_minima) : null,
-          año_construccion: formData.año_construccion ? parseInt(formData.año_construccion) : null,
-          capacidad_carga_piso: formData.capacidad_carga_piso ? parseFloat(formData.capacidad_carga_piso) : null,
-          capacidad_electrica: formData.capacidad_electrica ? parseFloat(formData.capacidad_electrica) : null,
-          tension_electrica: formData.tension_electrica,
-
-          // INSTALACIONES Y SERVICIOS
-          conectividad_fibra: formData.conectividad_fibra,
-          energia_renovable: formData.energia_renovable,
-          aislante_techo: formData.aislante_techo,
-          tragaluz_natural: formData.tragaluz_natural,
-          sistema_extraccion: formData.sistema_extraccion,
-          andenes_carga: formData.andenes_carga,
-          sellos_andenes: formData.sellos_andenes,
-          rampas_nivel: formData.rampas_nivel,
-          iluminacion_led: formData.iluminacion_led,
-          sistema_incendio: formData.sistema_incendio,
-
-          // DOCUMENTACIÓN
-          uso_suelo: formData.uso_suelo,
-          documentacion_regla: formData.documentacion_regla,
-
-          // SERVICIOS COMPLEMENTARIOS
-          banos_vestidores: formData.banos_vestidores,
-          regaderas: formData.regaderas,
-          comedor: formData.comedor,
-          accesos_independientes: formData.accesos_independientes,
-          caseta_seguridad: formData.caseta_seguridad,
-          estacionamiento: formData.estacionamiento,
-          terreno_camiones: formData.terreno_camiones,
-          rutas_transporte: formData.rutas_transporte,
-          servicios_agua: formData.servicios_agua,
-          via_ferrocarril: formData.via_ferrocarril,
-          total_pallet: formData.total_pallet,
-
-          // OBSERVACIONES
-          especificaciones_adicionales: formData.especificaciones_adicionales,
-          observaciones: formData.observaciones
-        }])
+        .insert([propiedadData])
         .select();
 
       if (error) {
