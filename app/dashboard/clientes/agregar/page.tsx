@@ -1,4 +1,4 @@
-// /dashboard/clientes/agregar/page.tsx
+// /dashboard/clientes/agregar/page.tsx - VERSIÓN CORREGIDA
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,19 +17,35 @@ export default function AgregarCliente() {
     if (email) setUserEmail(email);
   }, []);
 
+  // TIPOS EXPANDIDOS
+  const tiposCliente = [
+    'Propietario/Vendedor',
+    'Comprador/Inversionista', 
+    'Arrendador',
+    'Arrendatario',
+    'Inquilino',
+    'Promotor',
+    'Tercerizado'
+  ];
+
+  const tiposOperacion = ['compra', 'venta', 'renta'];
+  const tiposPropiedad = ['residencial', 'comercial', 'industrial'];
+  const tiposInteres = ['industrial', 'comercial', 'residencial'];
+
   const [formData, setFormData] = useState({
-    tipo: 'comprador',
+    tipo: 'Propietario/Vendedor', // ← VALOR INICIAL CORRECTO
     nombre: '',
     email: '',
     telefono: '',
     presupuesto_min: '',
     presupuesto_max: '',
     intereses: [] as string[],
+    propiedades_interes: [] as string[],
+    tipo_operacion: 'compra',
+    requerimientos_especificos: '',
     estatus: 'activo',
     notas: ''
   });
-
-  const tiposInteres = ['industrial', 'comercial', 'residencial'];
 
   const handleInteresChange = (interes: string) => {
     setFormData(prev => ({
@@ -61,7 +77,7 @@ export default function AgregarCliente() {
         .from('clientes')
         .insert([{
           ...formData,
-          broker_id: brokerId,  // ← ASIGNAR BROKER_ID AUTOMÁTICO
+          broker_id: brokerId,
           presupuesto_min: formData.presupuesto_min ? parseFloat(formData.presupuesto_min) : null,
           presupuesto_max: formData.presupuesto_max ? parseFloat(formData.presupuesto_max) : null
         }]);
@@ -125,7 +141,7 @@ export default function AgregarCliente() {
             marginBottom: '24px'
           }}>
             
-            {/* Tipo de Cliente */}
+            {/* Tipo de Cliente - CORREGIDO */}
             <div style={{ marginBottom: '24px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151', fontSize: '14px' }}>
                 Tipo de Cliente *
@@ -143,9 +159,9 @@ export default function AgregarCliente() {
                 }}
                 required
               >
-                <option value="comprador">Comprador</option>
-                <option value="vendedor">Vendedor</option>
-                <option value="ambos">Ambos</option>
+                {tiposCliente.map(tipo => (
+                  <option key={tipo} value={tipo}>{tipo}</option>
+                ))}
               </select>
             </div>
 
@@ -296,6 +312,80 @@ export default function AgregarCliente() {
                   </label>
                 ))}
               </div>
+            </div>
+
+            {/* Propiedades de Interés - NUEVO */}
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151', fontSize: '14px' }}>
+                Tipos de Propiedad de Interés
+              </label>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                {tiposPropiedad.map(tipo => (
+                  <label key={tipo} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.propiedades_interes.includes(tipo)}
+                      onChange={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          propiedades_interes: prev.propiedades_interes.includes(tipo)
+                            ? prev.propiedades_interes.filter(p => p !== tipo)
+                            : [...prev.propiedades_interes, tipo]
+                        }))
+                      }}
+                      style={{ marginRight: '8px' }}
+                    />
+                    <span style={{ textTransform: 'capitalize' }}>{tipo}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Tipo de Operación - NUEVO */}
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151', fontSize: '14px' }}>
+                Tipo de Operación Deseada
+              </label>
+              <select
+                name="tipo_operacion"
+                value={formData.tipo_operacion}
+                onChange={handleChange}
+                style={{ 
+                  width: '100%', 
+                  padding: '12px 16px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              >
+                {tiposOperacion.map(op => (
+                  <option key={op} value={op}>
+                    {op === 'compra' ? 'Compra' : op === 'venta' ? 'Venta' : 'Renta'}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Requerimientos Específicos - NUEVO */}
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151', fontSize: '14px' }}>
+                Requerimientos Específicos
+              </label>
+              <textarea
+                name="requerimientos_especificos"
+                value={formData.requerimientos_especificos}
+                onChange={handleChange}
+                rows={3}
+                style={{ 
+                  width: '100%', 
+                  padding: '12px 16px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  resize: 'vertical'
+                }}
+                placeholder="Ej: Necesito bodega con altura mínima de 8m, oficinas de 50m², acceso para tráileres..."
+              />
             </div>
 
             {/* Notas */}
